@@ -12,7 +12,7 @@ echo.
 REM ---- 1. Проверка Node.js ----
 where node >nul 2>&1
 if errorlevel 1 (
-    echo [X] Node.js не найден. Установите с https://nodejs.org/ (LTS) и перезапустите.
+    echo [X] Node.js не найден. Установите LTS с https://nodejs.org/
     pause
     exit /b 1
 )
@@ -21,14 +21,13 @@ REM ---- 2. ngrok.exe рядом со скриптом ----
 set "NGROK_EXE=%~dp0ngrok.exe"
 if not exist "%NGROK_EXE%" (
     echo [+] ngrok.exe не найден. Скачиваю...
-    powershell -NoProfile -Command ^
-        "$ErrorActionPreference='Stop'; Invoke-WebRequest -Uri 'https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip' -OutFile '%~dp0ngrok.zip'; Expand-Archive -Path '%~dp0ngrok.zip' -DestinationPath '%~dp0' -Force; Remove-Item '%~dp0ngrok.zip'"
-    if errorlevel 1 (
-        echo [X] Не удалось скачать ngrok. Скачайте вручную: https://ngrok.com/download
-        pause
-        exit /b 1
-    )
+    curl.exe -sSL -o "%~dp0ngrok.zip" "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip"
+    if errorlevel 1 goto :download_fail
+    tar.exe -xf "%~dp0ngrok.zip" -C "%~dp0"
+    if errorlevel 1 goto :download_fail
+    del /q "%~dp0ngrok.zip"
 )
+if not exist "%NGROK_EXE%" goto :download_fail
 
 REM ---- 3. authtoken (один раз) ----
 "%NGROK_EXE%" config check >nul 2>&1
@@ -85,3 +84,12 @@ start "" /B cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:4040"
 REM Когда ngrok закрывается — убираем сервер
 taskkill /F /IM node.exe >nul 2>&1
 endlocal
+exit /b 0
+
+:download_fail
+echo.
+echo [X] Не удалось скачать ngrok автоматически.
+echo     Скачайте вручную: https://ngrok.com/download
+echo     Распакуйте ngrok.exe в эту же папку и запустите скрипт снова.
+pause
+exit /b 1
