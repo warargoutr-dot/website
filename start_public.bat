@@ -1,79 +1,79 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 65001 > nul
-title Образовательная платформа — публичный запуск (ngrok)
+title Site - public launch via ngrok
 cd /d "%~dp0"
 
 echo ============================================
-echo   Публичный запуск сайта через ngrok
+echo   Public launch of the site via ngrok
 echo ============================================
 echo.
 
-REM ---- 1. Проверка Node.js ----
+REM ---- 1. Node.js ----
 where node >nul 2>&1
 if errorlevel 1 (
-    echo [X] Node.js не найден. Установите LTS с https://nodejs.org/
+    echo [X] Node.js not found. Install LTS from https://nodejs.org/
     pause
     exit /b 1
 )
 
-REM ---- 2. ngrok.exe рядом со скриптом ----
+REM ---- 2. ngrok.exe next to script ----
 set "NGROK_EXE=%~dp0ngrok.exe"
 if not exist "%NGROK_EXE%" (
-    echo [+] ngrok.exe не найден. Скачиваю...
+    echo [+] ngrok.exe not found, downloading...
     curl.exe -sSL -o "%~dp0ngrok.zip" "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip"
-    if errorlevel 1 goto :download_fail
+    if errorlevel 1 goto DOWNLOAD_FAIL
     tar.exe -xf "%~dp0ngrok.zip" -C "%~dp0"
-    if errorlevel 1 goto :download_fail
+    if errorlevel 1 goto DOWNLOAD_FAIL
     del /q "%~dp0ngrok.zip"
 )
-if not exist "%NGROK_EXE%" goto :download_fail
+if not exist "%NGROK_EXE%" goto DOWNLOAD_FAIL
 
-REM ---- 3. authtoken (один раз) ----
+REM ---- 3. authtoken (one-time) ----
 "%NGROK_EXE%" config check >nul 2>&1
 if errorlevel 1 (
     echo.
-    echo Перед первым запуском нужно сохранить ngrok authtoken.
-    echo Получить токен: https://dashboard.ngrok.com/get-started/your-authtoken
+    echo Save your ngrok authtoken once.
+    echo Get it at: https://dashboard.ngrok.com/get-started/your-authtoken
     echo.
-    set /p "NGROK_TOKEN=Введите authtoken: "
+    set /p "NGROK_TOKEN=Paste authtoken: "
     "%NGROK_EXE%" config add-authtoken !NGROK_TOKEN!
     if errorlevel 1 (
-        echo [X] Не удалось сохранить authtoken.
+        echo [X] Failed to save authtoken.
         pause
         exit /b 1
     )
 )
 
-REM ---- 4. Зависимости ----
+REM ---- 4. Dependencies ----
 if not exist "%~dp0node_modules" (
-    echo [+] Устанавливаю зависимости (npm install)...
+    echo [+] Installing dependencies (npm install)...
     call npm install
     if errorlevel 1 (
-        echo [X] npm install не удался.
+        echo [X] npm install failed.
         pause
         exit /b 1
     )
 )
 
-REM ---- 5. Остановить старые процессы ----
-echo [1/3] Останавливаю старые процессы node и ngrok...
+REM ---- 5. Stop old processes ----
+echo [1/3] Stopping old node and ngrok processes...
 taskkill /F /IM node.exe >nul 2>&1
 taskkill /F /IM ngrok.exe >nul 2>&1
 timeout /t 2 /nobreak >nul
 
-REM ---- 6. Запуск сервера ----
-echo [2/3] Запускаю Node.js сервер на порту 3000...
-start "Сервер сайта" /MIN cmd /c "node server.js > server.log 2>&1"
+REM ---- 6. Start Node server ----
+echo [2/3] Starting Node.js server on port 3000...
+start "Site server" /MIN cmd /c "node server.js > server.log 2>&1"
 timeout /t 5 /nobreak >nul
 
-REM ---- 7. Запуск ngrok ----
-echo [3/3] Запускаю ngrok туннель...
+REM ---- 7. Start ngrok ----
+echo [3/3] Starting ngrok tunnel...
 echo.
 echo ============================================
-echo   Адрес сайта появится ниже в строке Forwarding.
-echo   Также его видно в панели http://localhost:4040
-echo   Чтобы остановить — закройте это окно.
+echo   Public URL will appear below as "Forwarding ..."
+echo   Inspector panel: http://localhost:4040
+echo   Close this window to stop everything.
 echo ============================================
 echo.
 
@@ -81,15 +81,15 @@ start "" /B cmd /c "timeout /t 4 /nobreak >nul && start http://localhost:4040"
 
 "%NGROK_EXE%" http 3000
 
-REM Когда ngrok закрывается — убираем сервер
+REM Kill node when ngrok exits
 taskkill /F /IM node.exe >nul 2>&1
 endlocal
 exit /b 0
 
-:download_fail
+:DOWNLOAD_FAIL
 echo.
-echo [X] Не удалось скачать ngrok автоматически.
-echo     Скачайте вручную: https://ngrok.com/download
-echo     Распакуйте ngrok.exe в эту же папку и запустите скрипт снова.
+echo [X] Failed to download ngrok automatically.
+echo     Download manually: https://ngrok.com/download
+echo     Put ngrok.exe next to this script and run again.
 pause
 exit /b 1
